@@ -3472,6 +3472,8 @@ BOOLEAN mcast_validate_igmp_packet(IGMP_MESSAGE * sptr_igmp_message,
 		break;
 
 	case IGMP_V3_MEMBERSHIP_REPORT_TYPE:
+		if (!igmpv3_report_fits(igmpv3_rep, igmp_pkt_size))
+			return FALSE;
 
 		num_grps = net_to_host_short(igmpv3_rep->num_grps);
 		grp_rec = igmpv3_rep->group_record;
@@ -3485,7 +3487,7 @@ BOOLEAN mcast_validate_igmp_packet(IGMP_MESSAGE * sptr_igmp_message,
 				num_srcs = net_to_host_short(grp_rec->num_srcs);
 				pkt_size =
 				    pkt_size + IGMPV3_GROUP_REC_HDR_SIZE +
-				    ((num_srcs) * sizeof (UINT32));
+				    ((num_srcs + grp_rec->aux_data_len) * sizeof (UINT32));
 			} else {
 				return FALSE;
 			}
