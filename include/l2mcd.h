@@ -432,6 +432,8 @@ l2mcd_if_tree_t* l2mcd_kif_to_rx_if(uint32_t kif);
  * and logged at most once per family every L2MCD_RX_DROP_LOG_SECS, with the
  * number dropped since the last line: a flood of them cannot flood the log. */
 #define L2MCD_RX_DROP_COUNTERS
+#define L2MCD_IGMP_RX_LEN_CHECK
+int l2mcd_igmp_rx_len_ok(const uint8_t *ip, size_t len);
 #define L2MCD_RX_DROP_LOG_SECS 10
 void l2mcd_rx_drop(int afi, uint32_t vid, uint32_t port, const char *why);
 void l2mcd_set_loglevel(int level);
