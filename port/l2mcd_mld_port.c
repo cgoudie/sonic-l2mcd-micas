@@ -3583,6 +3583,8 @@ BOOLEAN mcast_validate_mld_packet(IP6_RX_PKT_MSG *mld_pkt_msg)
     mcast_set_ipv6_addr(&mldv2_addr, &mldv2);
     mld_vport = gMld.port_list[vir_port_id];
     vid = mld_l3_get_port_from_ifindex(vir_port_id, MLD_VLAN);
+    if (!icmp6h)    /* next header neither hop-by-hop nor ICMPv6 */
+        return FALSE;
     switch (icmp6h->type)
     {
     case MLD_MEMBERSHIP_QUERY_TYPE: // MLDv1v2 Query
@@ -3674,14 +3676,17 @@ BOOLEAN mcast_validate_mld_packet(IP6_RX_PKT_MSG *mld_pkt_msg)
             return FALSE;
         }
 
-        UINT16 offset = 0;
+        UINT32 offset = 0;
         UINT16 num_grps = ntohs(mesg->num_grps);
-        MLDV2_GROUP_RECORD *mldv2_group_rec = &mesg->group_record;
-        for (int n = 0; n < num_grps; n++)
+        MLDV2_GROUP_RECORD *mldv2_group_rec = mesg->group_record;
+        if (!mldv2_report_fits(mesg, mesg_size))
         {
-            int num_srcs = ntohs(mldv2_group_rec->num_srcs);
-            offset = offset + sizeof(MLDV2_GROUP_RECORD) + (num_srcs - 1) * sizeof(IPV6_ADDRESS);
-            mldv2_group_rec = (MLDV2_GROUP_RECORD *)((UINT8 *)mldv2_group_rec + offset);
+            mld->mld_stats[vir_port_id].recv_size_or_range_error++;
+            return FALSE;
+        }
+        for (int n = 0; n < num_grps; n++, mldv2_group_rec = MLDV2_NEXT_REC(mldv2_group_rec))
+        {
+            offset += (UINT8 *)MLDV2_NEXT_REC(mldv2_group_rec) - (UINT8 *)mldv2_group_rec;
         }
         if (mesg_size != offset + sizeof(MLDV2_REPORT_MESSAGE) - sizeof(MLDV2_GROUP_RECORD))
         {
